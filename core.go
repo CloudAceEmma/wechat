@@ -3,11 +3,11 @@ package wechat
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -219,38 +219,19 @@ func (core *Core) Login() error {
 		return err
 	}
 
-	re, err := regexp.Compile(`<ret>(.*)<\/ret>`)
-	if err != nil {
+	var result LoginResponse
+	if err := xml.Unmarshal(body, &result); err != nil {
 		return err
 	}
 
-	pm := re.FindStringSubmatch(string(body))
-	if len(pm) > 1 && pm[1] == "0" {
-		data := string(body)
-		reSkey, err := regexp.Compile(`<skey>(.*)<\/skey>`)
-		if err != nil {
-			return err
-		}
-		core.SessionData.Skey = reSkey.FindStringSubmatch(data)[1]
-
-		reWxsid, err := regexp.Compile(`<wxsid>(.*)<\/wxsid>`)
-		if err != nil {
-			return err
-		}
-		core.SessionData.Sid = reWxsid.FindStringSubmatch(data)[1]
-
-		reWxuin, err := regexp.Compile(`<wxuin>(.*)<\/wxuin>`)
-		if err != nil {
-			return err
-		}
-		core.SessionData.Uin = reWxuin.FindStringSubmatch(data)[1]
-
-		rePassTicket, err := regexp.Compile(`<pass_ticket>(.*)<\/pass_ticket>`)
-		if err != nil {
-			return err
-		}
-		core.SessionData.PassTicket = rePassTicket.FindStringSubmatch(data)[1]
+	if result.Ret != "0" {
+		return errors.New(result.Message)
 	}
+
+	core.SessionData.Skey = *result.Skey
+	core.SessionData.Sid = *result.Wxsid
+	core.SessionData.Uin = *result.Wxuin
+	core.SessionData.PassTicket = *result.PassTicket
 
 	for _, cookie := range resp.Cookies() {
 		if cookie.Name == "webwx_data_ticket" {

@@ -1,5 +1,7 @@
 package wechat
 
+import "encoding/xml"
+
 type User struct {
 	Uin               int    `json:"Uin"`
 	UserName          string `json:"UserName"`
@@ -264,4 +266,16 @@ type GetContactResponse struct {
 	MemberCount  int          `json:"MemberCount"`
 	MemberList   []Contact    `json:"MemberList"`
 	Seq          int          `json:"Seq"`
+}
+
+type LoginResponse struct {
+	XMLName     xml.Name `xml:"error"`
+	Text        string   `xml:",chardata"`
+	Ret         string   `xml:"ret"`
+	Message     string   `xml:"message"`
+	Skey        *string  `xml:"skey"`
+	Wxsid       *string  `xml:"wxsid"`
+	Wxuin       *string  `xml:"wxuin"`
+	PassTicket  *string  `xml:"pass_ticket"`
+	Isgrayscale *string  `xml:"isgrayscale"`
 }

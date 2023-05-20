@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os/signal"
 	"syscall"
@@ -69,7 +70,15 @@ func main() {
 	router := gin.Default()
 	initAllApiHanlders(router) // init all api handlers
 
-	srv := &http.Server{Addr: ":8080", Handler: router}
+	localIp, err := getOutboundIP()
+	if err != nil {
+		log.Println("Failed to get local ip")
+		log.Fatal(err)
+	}
+
+	listenAddr := localIp.String() + ":8080"
+	log.Println("got local ip:", localIp.String())
+	srv := &http.Server{Addr: listenAddr, Handler: router}
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil &&
@@ -89,4 +98,17 @@ func main() {
 		}
 		log.Println("logged out:", core.User.NickName)
 	}
+}
+
+// Get preferred outbound ip of this machine
+func getOutboundIP() (*net.IP, error) {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+	return &localAddr.IP, nil
 }
