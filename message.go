@@ -3,12 +3,14 @@ package wechat
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/CloudAceEmma/wechat/utils"
@@ -94,12 +96,28 @@ func (core *Core) SendMsg(msgAny interface{}, to string) error {
 			uri = core.Config.Api.SendAppMsg
 			msgType = Attach
 			mtype := mimetype.Detect(msgMedia.FileBytes)
-			content = utils.GetAttachmentContent(utils.AppMessage{
-				Name:    msgMedia.Name,
-				Size:    len(msgMedia.FileBytes),
-				MediaId: resp.MediaID,
-				Ext:     mtype.Extension()[1:],
-			})
+			appmsg := Appmsg{
+				Appid:   "wxeb7ec651dd0aefa9",
+				Sdkver:  "",
+				Title:   msgMedia.Name,
+				Des:     "",
+				Action:  "",
+				Type:    "6",
+				Content: "",
+				URL:     "",
+				Lowurl:  "",
+				Appattach: Appattach{
+					Totallen: strconv.Itoa(len(msgMedia.FileBytes)),
+					Attachid: resp.MediaID,
+					Fileext:  mtype.Extension()[1:],
+				},
+				Extinfo: "",
+			}
+			marshalled, err := xml.Marshal(&appmsg)
+			if err != nil {
+				return err
+			}
+			content = string(marshalled)
 		} else {
 			return ErrInvalidMsgType
 		}

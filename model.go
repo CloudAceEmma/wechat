@@ -279,3 +279,26 @@ type LoginResponse struct {
 	PassTicket  *string  `xml:"pass_ticket"`
 	Isgrayscale *string  `xml:"isgrayscale"`
 }
+
+type Appattach struct {
+	Text     string `xml:",chardata"`
+	Totallen string `xml:"totallen"`
+	Attachid string `xml:"attachid"`
+	Fileext  string `xml:"fileext"`
+}
+
+type Appmsg struct {
+	XMLName   xml.Name  `xml:"appmsg"`
+	Text      string    `xml:",chardata"`
+	Appid     string    `xml:"appid,attr"`
+	Sdkver    string    `xml:"sdkver,attr"`
+	Title     string    `xml:"title"`
+	Des       string    `xml:"des"`
+	Action    string    `xml:"action"`
+	Type      string    `xml:"type"`
+	Content   string    `xml:"content"`
+	URL       string    `xml:"url"`
+	Lowurl    string    `xml:"lowurl"`
+	Appattach Appattach `xml:"appattach"`
+	Extinfo   string    `xml:"extinfo"`
+}
