@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"strings"
-	"time"
 
 	"github.com/CloudAceEmma/wechat"
 )
@@ -16,32 +15,26 @@ type PingMessage struct {
 
 type PeriodicSyncOption struct {
 	Cancel context.CancelFunc
-	Period time.Duration
 }
 
 func periodicSync(options PeriodicSyncOption) {
 	var errSlice []bool
-	t := time.NewTicker(options.Period * time.Millisecond)
-	defer t.Stop()
 	for {
-		select {
-		case <-t.C: // Activate periodically
-			var err error
-			if err = core.SyncPolling(); err == nil {
-				if len(errSlice) >= 10 {
-					options.Cancel()
-				}
-				errSlice = nil
-				continue
+		var err error
+		if err = core.SyncPolling(); err == nil {
+			if len(errSlice) >= 10 {
+				options.Cancel()
 			}
-			if err == wechat.ErrAlreadyLoggedOut {
-				if len(errSlice) >= 10 {
-					options.Cancel()
-				}
-				errSlice = append(errSlice, true)
-			} else {
-				log.Println("sync error:", err.Error())
+			errSlice = nil
+			continue
+		}
+		if err == wechat.ErrAlreadyLoggedOut {
+			if len(errSlice) >= 10 {
+				options.Cancel()
 			}
+			errSlice = append(errSlice, true)
+		} else {
+			log.Println("sync error:", err.Error())
 		}
 	}
 }

@@ -64,7 +64,6 @@ func main() {
 
 	go periodicSync(PeriodicSyncOption{ // as a goroutine
 		Cancel: cancel,
-		Period: 20,
 	})
 
 	router := gin.Default()
