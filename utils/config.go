@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"regexp"
+	"errors"
 	"strings"
 )
 
@@ -114,40 +114,39 @@ func NewConfig(option ConfigOption) (*Config, error) {
 	fileUrl := "file.wx.qq.com"
 	pushUrl := "webpush.weixin.qq.com"
 
-	found, err := regexp.MatchString("\\w+(\\.qq\\.com|\\.wechat\\.com)", host)
-	if err != nil {
-		return nil, err
+	if !strings.HasSuffix(host, ".qq.com") &&
+		!strings.HasSuffix(host, ".wechat.com") {
+		return nil, errors.New("host name invalid: " + host)
 	}
 
-	if found {
-		var prefix string
-		var suffix string
+	var prefix string
+	var suffix string
 
-		if strings.HasSuffix(host, ".qq.com") {
-			if strings.HasPrefix(host, "wx.") {
-				prefix = "wx."
-			} else if strings.HasPrefix(host, "wx2.") {
-				prefix = "wx2."
-			} else if strings.HasPrefix(host, "wx8.") {
-				prefix = "wx8."
-			} else {
-				prefix = "wx."
-			}
-			suffix = "qq.com"
+	if strings.HasSuffix(host, ".qq.com") {
+		if strings.HasPrefix(host, "wx.") {
+			prefix = "wx."
+		} else if strings.HasPrefix(host, "wx2.") {
+			prefix = "wx2."
+		} else if strings.HasPrefix(host, "wx8.") {
+			prefix = "wx8."
 		} else {
-			if strings.HasPrefix(host, "web.") {
-				prefix = "web."
-			} else if strings.HasPrefix(host, "web2") {
-				prefix = "web2."
-			} else {
-				prefix = "web."
-			}
-			suffix = "wechat.com"
+			prefix = "wx."
 		}
-		loginUrl = "login." + prefix + suffix
-		fileUrl = "file." + prefix + suffix
-		pushUrl = "webpush." + prefix + suffix
+		suffix = "qq.com"
+	} else if strings.HasSuffix(host, ".wechat.com") {
+		if strings.HasPrefix(host, "web.") {
+			prefix = "web."
+		} else if strings.HasPrefix(host, "web2") {
+			prefix = "web2."
+		} else {
+			prefix = "web."
+		}
+		suffix = "wechat.com"
 	}
+
+	loginUrl = "login." + prefix + suffix
+	fileUrl = "file." + prefix + suffix
+	pushUrl = "webpush." + prefix + suffix
 
 	conf := Config{
 		SyncCheckRetSuccess: 0,
