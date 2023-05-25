@@ -256,20 +256,16 @@ func (core *Core) SyncPolling() error {
 
 	switch core.SyncSelector {
 	case MessageContact:
-		core.modDelContact(data) // This will not fail
-		if core.SyncMsgFunc == nil || data.AddMsgCount == 0 {
-			goto sync_contact
-		}
-		if err := core.SyncMsgFunc(data); err != nil {
-			return err
+		if data.AddMsgCount > 0 {
+			if err := core.handleNewMsg(data); err != nil {
+				return err
+			}
 		}
 
-	sync_contact:
-		if core.SyncContactFunc == nil {
-			return nil
-		}
-		if err := core.SyncContactFunc(data); err != nil {
-			return err
+		if data.ModContactCount > 0 || data.DelContactCount > 0 {
+			if err := core.handleContacts(data); err != nil {
+				return err
+			}
 		}
 	case ModProfile:
 		fmt.Println("profile modified") // TODO Handle this
@@ -280,20 +276,108 @@ func (core *Core) SyncPolling() error {
 	return nil
 }
 
-func (core *Core) modDelContact(data *SyncResponse) {
-	if data.ModContactCount > 0 {
-		// Handle new contacts
-		for _, contact := range data.ModContactList {
-			log.Println("mod contact: " + contact.UserName)
-			core.ContactMap[contact.UserName] = contact
+func (core *Core) handleNewMsg(data *SyncResponse) error {
+	var needCallback = false
+	if data.AddMsgCount > 0 {
+		needCallback = true
+	}
+
+	var userNames []string
+	for _, msg := range data.AddMsgList {
+		if strings.Contains(msg.Content, "You were removed from") {
+			log.Println("kicked from group:", msg.FromUserName)
+		}
+
+		if msg.MsgType == 51 {
+			userName := strings.Split(msg.StatusNotifyUserName, ",")
+			userNames = append(userNames, userName...)
+
+		}
+
+		_, found := core.ContactMap[msg.FromUserName]
+		if !found {
+			userNames = append(userNames, msg.FromUserName)
+		}
+
+		if found && strings.HasPrefix(msg.FromUserName, "@@") &&
+			core.ContactMap[msg.FromUserName].MemberCount == 0 {
+			userNames = append(userNames, msg.FromUserName)
 		}
 	}
 
-	if data.DelContactCount > 0 {
-		// Handle new contacts
-		for _, contact := range data.DelContactList {
-			log.Println("del contact: " + contact.UserName)
-			delete(core.ContactMap, contact.UserName)
+	var contacts []Contact
+	for _, userName := range userNames {
+		contacts = append(contacts, Contact{UserName: userName})
+	}
+
+	chunks := ChunkContacts(contacts, 40)
+
+	for _, chunk := range chunks {
+		err := core.BatchGetContact(chunk)
+		if err != nil && err != ErrContactListEmpty {
+			return err
 		}
 	}
+
+	if needCallback && core.SyncMsgFunc != nil {
+		if err := core.SyncMsgFunc(data); err != nil {
+			return err
+		}
+	}
+
+	if len(contacts) > 0 {
+		log.Println("contact map:", len(core.ContactMap))
+	}
+
+	return nil
+}
+
+func (core *Core) handleContacts(data *SyncResponse) error {
+	var needCallback = false
+	if data.ModContactCount > 0 {
+		needCallback = true
+	}
+
+	// Handle new contacts
+	for _, contact := range data.ModContactList {
+		log.Println("mod contact: " + contact.UserName)
+		core.ContactMap[contact.UserName] = contact
+		log.Println("contact map:", len(core.ContactMap))
+	}
+
+	if data.DelContactCount > 0 {
+		needCallback = true
+	}
+
+	// Handle del contacts
+	for _, contact := range data.DelContactList {
+		log.Println("del contact: " + contact.UserName)
+		delete(core.ContactMap, contact.UserName)
+		log.Println("contact map:", len(core.ContactMap))
+	}
+
+	if needCallback && core.SyncContactFunc != nil {
+		if err := core.SyncContactFunc(data); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ChunkContacts(slice []Contact, chunkSize int) [][]Contact {
+	var chunks [][]Contact
+	for i := 0; i < len(slice); i += chunkSize {
+		end := i + chunkSize
+
+		// necessary check to avoid slicing beyond
+		// slice capacity
+		if end > len(slice) {
+			end = len(slice)
+		}
+
+		chunks = append(chunks, slice[i:end])
+	}
+
+	return chunks
 }

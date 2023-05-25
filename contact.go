@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -14,11 +15,11 @@ import (
 	"github.com/CloudAceEmma/wechat/utils"
 )
 
-func (core *Core) GetContact() error {
+func (core *Core) GetContact(seq int) error {
 	ts := time.Now().UnixNano() / int64(time.Millisecond)
 
 	params := url.Values{}
-	params.Add("seq", fmt.Sprintf("%d", int(core.ContactSeq)))
+	params.Add("seq", fmt.Sprintf("%d", seq))
 	params.Add("skey", core.SessionData.Skey)
 	params.Add("r", fmt.Sprintf("%d", int64(ts)))
 
@@ -50,10 +51,8 @@ func (core *Core) GetContact() error {
 	if err := json.Unmarshal(body, &result); err != nil {
 		return err
 	}
-
 	if result.Seq > 0 {
-		core.ContactSeq = result.Seq
-		if err = core.GetContact(); err != nil {
+		if err = core.GetContact(result.Seq); err != nil {
 			return err
 		}
 		return nil
@@ -69,9 +68,13 @@ func (core *Core) GetContact() error {
 			}
 		}
 
-		err := core.BatchGetContact(contacts)
-		if err != nil && err != ErrContactListEmpty {
-			return err
+		chunks := ChunkContacts(contacts, 40)
+
+		for _, chunk := range chunks {
+			err := core.BatchGetContact(chunk)
+			if err != nil && err != ErrContactListEmpty {
+				return err
+			}
 		}
 	}
 
@@ -146,6 +149,8 @@ func (core *Core) BatchGetContact(contacts []Contact) error {
 		errMsg := utils.GetErrorMsgInt(result.BaseResponse.Ret)
 		return errors.New(errMsg)
 	}
+
+	log.Println("batch get res:", len(result.ContactList))
 
 	for _, contact := range result.ContactList {
 		core.ContactMap[contact.UserName] = contact

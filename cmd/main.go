@@ -19,7 +19,7 @@ func main() {
 	var err error
 
 	if core, err = wechat.New(wechat.CoreOption{
-		SyncMsgFunc:     onMsgRecv,
+		SyncMsgFunc:     nil,
 		SyncContactFunc: nil,
 	}); err != nil {
 		log.Fatal(err)
@@ -48,7 +48,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err = core.GetContact(); err != nil {
+	if err = core.GetContact(0); err != nil {
 		log.Fatal(err)
 	}
 

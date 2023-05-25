@@ -3,7 +3,7 @@
 #### Request
 ##### HTTP request
 ```
-POST http://SERVER_HOST_IP/sendmsg
+POST http://SERVER_HOST_IP:8080/sendmsg
 ```
 ##### Content type
 application/json
@@ -23,7 +23,7 @@ else, it returns the error message.
 #### Request
 ##### HTTP request
 ```
-POST http://SERVER_HOST_IP/sendfile
+POST http://SERVER_HOST_IP:8080/sendfile
 ```
 ##### Content type
 multipart/form-data
@@ -41,8 +41,8 @@ else, it returns the error message.
 
 ### Examples
 ```
-curl -v http://127.0.0.1:8080/sendfile -H 'Content-Type: multipart/form-data' -F 'NickName=test001' -F 'file=@media/gopher.jgg'
+curl http://127.0.0.1:8080/sendfile -H 'Content-Type: multipart/form-data' -F 'NickName=test001' -F 'file=@media/gopher.jpg'
 ```
 ```
-curl http://127.0.0.1:8080/sendmsg -H Content-Type: application/json -d '{"TextMsg": "hello from wechat bot", "NickName": "test001"}'
+curl http://127.0.0.1:8080/sendmsg -H 'Content-Type: application/json' -d '{"TextMsg": "hello from wechat bot", "NickName": "test001"}'
 ```
